@@ -26,8 +26,47 @@ app_include_css = "frappe_tinymce.bundle.css"
 #
 # tinymce.min.js stays unbundled so TinyMCE can lazy-load its own skins, themes,
 # plugins and language packs relative to that path.
+def _tinymce_script():
+    """Version-scoped URL for the TinyMCE core.
+
+    TinyMCE lazily loads its theme, model, skins, plugins and language packs
+    relative to the URL the core was loaded from. Serving it from a stable path
+    lets a browser pair a cached core with a freshly fetched theme after an
+    upgrade, which throws inside the theme and renders no editor at all. The
+    version in the path makes that mismatch impossible.
+
+    build.js writes public/tinymce/CURRENT when it stages the assets.
+    """
+    import os
+
+    staged = os.path.join(os.path.dirname(__file__), "public", "tinymce")
+
+    version = ""
+    try:
+        with open(os.path.join(staged, "CURRENT")) as f:
+            version = f.read().strip()
+    except OSError:
+        # CURRENT can be missing if the assets were staged by an older build.
+        # Fall back to whatever version directory is actually on disk, so a
+        # missing marker degrades into the right URL instead of a 404.
+        try:
+            versions = sorted(
+                d
+                for d in os.listdir(staged)
+                if os.path.isfile(os.path.join(staged, d, "tinymce.min.js"))
+            )
+            version = versions[-1] if versions else ""
+        except OSError:
+            version = ""
+
+    if version:
+        return f"/assets/frappe_tinymce/tinymce/{version}/tinymce.min.js"
+    # Nothing staged yet (fresh clone before `bench build`).
+    return "/assets/frappe_tinymce/tinymce/tinymce.min.js"
+
+
 app_include_js = [
-    "/assets/frappe_tinymce/tinymce/tinymce.min.js",
+    _tinymce_script(),
     "frappe_tinymce.bundle.js",
 ]
 

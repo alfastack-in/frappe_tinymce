@@ -82,7 +82,9 @@ frappe.ui.form.ControlTextEditor = class ControlTextEditor extends frappe.ui.for
 		const direction = this.get_text_direction();
 
 		const options = {
-			base_url: "/assets/frappe_tinymce/tinymce",
+			// No base_url: TinyMCE derives it from the script tag it was loaded
+			// from, which is version-scoped, so lazily loaded skins/plugins/langs
+			// can never come from a different release than the core.
 			license_key: "gpl",
 			menubar: false,
 			branding: false,

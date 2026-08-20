@@ -18,8 +18,8 @@ const path = require("path");
 const APP_ROOT = __dirname;
 const SRC = path.join(APP_ROOT, "node_modules", "tinymce");
 const I18N = path.join(APP_ROOT, "node_modules", "tinymce-i18n", "langs8");
-const DEST = path.join(APP_ROOT, "frappe_tinymce", "public", "tinymce");
-const STAMP = path.join(DEST, ".version");
+const STAGE_ROOT = path.join(APP_ROOT, "frappe_tinymce", "public", "tinymce");
+const CURRENT = path.join(STAGE_ROOT, "CURRENT");
 
 const COPY_DIRS = ["themes", "models", "icons", "plugins", "skins"];
 
@@ -29,9 +29,25 @@ function tinymce_version() {
 
 function is_current(version) {
 	try {
-		return fs.readFileSync(STAMP, "utf8").trim() === version;
+		return (
+			fs.readFileSync(CURRENT, "utf8").trim() === version &&
+			fs.existsSync(path.join(STAGE_ROOT, version, "tinymce.min.js"))
+		);
 	} catch (e) {
 		return false;
+	}
+}
+
+// Assets are staged under a version directory. TinyMCE lazily loads its theme,
+// model, skins and plugins relative to the URL it was loaded from, so a stable
+// path lets a browser mix a cached core with a freshly fetched theme after an
+// upgrade — which throws deep inside the theme and renders nothing at all.
+function prune_old_versions(keep) {
+	if (!fs.existsSync(STAGE_ROOT)) return;
+	for (const entry of fs.readdirSync(STAGE_ROOT, { withFileTypes: true })) {
+		if (entry.isDirectory() && entry.name !== keep) {
+			fs.rmSync(path.join(STAGE_ROOT, entry.name), { recursive: true, force: true });
+		}
 	}
 }
 
@@ -63,6 +79,7 @@ function main() {
 		return;
 	}
 
+	const DEST = path.join(STAGE_ROOT, version);
 	fs.rmSync(DEST, { recursive: true, force: true });
 	fs.mkdirSync(DEST, { recursive: true });
 
@@ -92,12 +109,13 @@ function main() {
 		const target = path.join(DEST, dir);
 		if (fs.existsSync(target)) prune(target);
 	}
-	fs.writeFileSync(STAMP, version + "\n");
+	prune_old_versions(version);
+	fs.writeFileSync(CURRENT, version + "\n");
 
 	const langs = fs.existsSync(path.join(DEST, "langs"))
 		? fs.readdirSync(path.join(DEST, "langs")).length
 		: 0;
-	console.log(`Staged tinymce ${version} (${langs} language packs) into public/tinymce.`);
+	console.log(`Staged tinymce ${version} (${langs} language packs) into public/tinymce/${version}.`);
 }
 
 main();
