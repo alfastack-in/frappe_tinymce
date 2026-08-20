@@ -64,6 +64,7 @@ frappe.ui.form.ControlTextEditor = class ControlTextEditor extends frappe.ui.for
 				// whichever editor was touched last and is shared across the page.
 				this._editor = editor;
 				this.bind_editor_events(editor);
+				this.bind_form_control_state(editor);
 
 				const initial = this._pending_value !== undefined ? this._pending_value : this.value;
 				this.write_to_editor(initial);
@@ -105,8 +106,14 @@ frappe.ui.form.ControlTextEditor = class ControlTextEditor extends frappe.ui.for
 			automatic_uploads: true,
 			images_file_types: "jpeg,jpg,png,gif,webp,svg",
 			images_upload_handler: this.get_image_upload_handler(),
-			extended_valid_elements:
-				"span[class|data-id|data-is-group|data-value|style],a[href|target|class|rel|title]",
+			extended_valid_elements: [
+				"span[class|data-id|data-is-group|data-value|style]",
+				"a[href|target|class|rel|title]",
+				// Inline form controls used for questionnaires / checklists. `checked`
+				// must be listed or the serialiser drops the state we mirror onto it.
+				"input[type|checked|disabled|name|value|placeholder]",
+				"label[for|class]",
+			].join(","),
 			plugins: [
 				"autolink",
 				"autoresize",
@@ -262,6 +269,42 @@ frappe.ui.form.ControlTextEditor = class ControlTextEditor extends frappe.ui.for
 				xhr.onerror = () => reject({ message: __("Image upload failed"), remove: true });
 				xhr.send(form_data);
 			});
+	}
+
+	// Clicking a checkbox or radio sets the DOM *property*; TinyMCE serialises
+	// *attributes*. Without mirroring, getContent() is byte-identical before and
+	// after a click, so the state is never stored and the form is never dirty.
+	bind_form_control_state(editor) {
+		const sync = (node) => {
+			if (!node || node.nodeName !== "INPUT") return false;
+			const type = (node.type || "").toLowerCase();
+			if (type !== "checkbox" && type !== "radio") return false;
+
+			// A read-only field must not be togglable; snap back to the stored state.
+			if (this._editor && this._editor.mode.get() === "readonly") {
+				node.checked = node.hasAttribute("checked");
+				return false;
+			}
+
+			if (node.checked) {
+				node.setAttribute("checked", "checked");
+			} else {
+				node.removeAttribute("checked");
+			}
+			return true;
+		};
+
+		const handler = (event) => {
+			if (!sync(event.target)) return;
+			// Attribute writes bypass the undo stack, so record one undo level.
+			editor.undoManager.add();
+			this.push_to_model();
+		};
+
+		const doc = editor.getDoc();
+		// Capture phase, and both events: `click` also covers Space on a focused box.
+		doc.addEventListener("click", handler, true);
+		doc.addEventListener("change", handler, true);
 	}
 
 	bind_editor_events(editor) {
