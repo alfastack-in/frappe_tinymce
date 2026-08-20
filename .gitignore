@@ -4,3 +4,11 @@
 *.swp
 tags
 frappe_tinymce/docs/current
+# esbuild output
+public/dist/
+frappe_tinymce/public/dist/
+
+# node deps + TinyMCE staged by build.js (GPL; deliberately not vendored so this
+# repo stays MIT — see build.js)
+node_modules/
+frappe_tinymce/public/tinymce/

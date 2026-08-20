@@ -1,0 +1,14 @@
+{
+	"name": "frappe_tinymce",
+	"version": "0.0.2",
+	"private": true,
+	"description": "Frappe app to replace the default text editor with TinyMCE",
+	"license": "MIT",
+	"scripts": {
+		"build": "node build.js"
+	},
+	"dependencies": {
+		"tinymce": "^8.5.1",
+		"tinymce-i18n": "^26.8.2"
+	}
+}
