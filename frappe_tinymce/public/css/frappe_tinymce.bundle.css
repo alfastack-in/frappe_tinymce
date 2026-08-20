@@ -1,0 +1,64 @@
+/**
+ * Make TinyMCE sit inside Frappe's form layout instead of on top of it.
+ * The previous stylesheet hardcoded `top: 135px` for the sticky toolbar, which
+ * only lined up with one particular header height.
+ */
+
+.tox.tox-tinymce {
+	border: 1px solid var(--border-color);
+	border-radius: var(--border-radius, 6px);
+	background-color: var(--control-bg, transparent);
+	font-family: var(--font-stack);
+}
+
+/* Sticky toolbar: offset by the real sticky header rather than a magic number. */
+.tox .tox-editor-header {
+	z-index: 1 !important;
+	box-shadow: none !important;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.tox.tox-tinymce--toolbar-sticky-on .tox-editor-header {
+	top: var(--tinymce-sticky-offset, 0) !important;
+}
+
+.tox .tox-toolbar,
+.tox .tox-toolbar__primary,
+.tox .tox-toolbar__overflow {
+	background-color: var(--fg-color, transparent) !important;
+}
+
+/* Frappe renders read-only fields as plain HTML; keep editor output consistent. */
+.tox .tox-edit-area::before {
+	border-color: var(--primary, #2490ef);
+}
+
+/* Grid rows are short — keep the single-row toolbar tight. */
+.grid-row .tox.tox-tinymce {
+	border-radius: 4px;
+}
+
+.grid-row .tox .tox-toolbar__primary {
+	padding: 0;
+}
+
+/* Dark theme: oxide-dark handles most chrome, these cover the seams where the
+   skin's own greys clash with Frappe's surfaces. */
+[data-theme="dark"] .tox.tox-tinymce,
+[data-theme="dark"] .tox .tox-editor-header {
+	border-color: var(--border-color);
+}
+
+[data-theme="dark"] .tox .tox-toolbar,
+[data-theme="dark"] .tox .tox-toolbar__primary,
+[data-theme="dark"] .tox .tox-toolbar__overflow {
+	background-color: var(--fg-color, transparent) !important;
+}
+
+/* Mentions inserted by the autocompleter, shown in read-mode HTML too. */
+.ql-editor .mention,
+.tox .mention {
+	background-color: var(--bg-light-gray, #f4f5f6);
+	border-radius: 3px;
+	padding: 0 3px;
+}

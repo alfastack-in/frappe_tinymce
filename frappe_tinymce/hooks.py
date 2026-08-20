@@ -13,12 +13,22 @@ app_license = "MIT"
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/frappe_tinymce/css/frappe_tinymce.css"
-# app_include_js = "/assets/frappe_tinymce/js/frappe_tinymce.js"
+app_include_css = "frappe_tinymce.bundle.css"
 
+# TinyMCE is served from this app (public/tinymce) instead of a CDN: no
+# third-party script in the desk, no SRI gap, and no runtime network call.
+#
+# It is NOT committed to this repository. build.js stages it from node_modules on
+# `bench build`, because TinyMCE 8.x is GPLv2+/commercial and keeping it out of
+# the repo keeps this app MIT for anyone who clones it — the GPL combination only
+# ever exists on a deployed machine, which is private use. Config sets
+# license_key = "gpl" for the GPL terms that deployment runs under.
+#
+# tinymce.min.js stays unbundled so TinyMCE can lazy-load its own skins, themes,
+# plugins and language packs relative to that path.
 app_include_js = [
-    "https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.2.0/tinymce.min.js",
-    "/assets/frappe_tinymce/js/frappe_tinymce.js"
+    "/assets/frappe_tinymce/tinymce/tinymce.min.js",
+    "frappe_tinymce.bundle.js",
 ]
 
 # include js, css files in header of web template
