@@ -70,6 +70,7 @@ frappe.ui.form.ControlTextEditor = class ControlTextEditor extends frappe.ui.for
 				this.write_to_editor(initial);
 				this._pending_value = undefined;
 				this.set_editor_mode();
+				this.ensure_editor_visible();
 			})
 			.catch(() => {
 				this._editor_pending = false;
@@ -415,6 +416,18 @@ frappe.ui.form.ControlTextEditor = class ControlTextEditor extends frappe.ui.for
 	refresh() {
 		super.refresh();
 		this.set_editor_mode();
+		this.ensure_editor_visible();
+	}
+
+	// TinyMCE renders the shell with `visibility: hidden` and clears it once the
+	// skin and sizing settle. On a cold form load that clear can be missed,
+	// leaving a correctly sized but completely invisible editor — the field shows
+	// its label and then blank space. Clearing it ourselves is idempotent.
+	ensure_editor_visible() {
+		const container = this._editor && this._editor.getContainer && this._editor.getContainer();
+		if (container && container.style.visibility === "hidden") {
+			container.style.visibility = "";
+		}
 	}
 
 	set_editor_mode() {
