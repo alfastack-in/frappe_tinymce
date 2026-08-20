@@ -71,6 +71,10 @@ frappe.ui.form.ControlTextEditor = class ControlTextEditor extends frappe.ui.for
 				this._pending_value = undefined;
 				this.set_editor_mode();
 				this.ensure_editor_visible();
+				// A late hide can land after init resolves; re-check next frame and
+				// once more after layout settles.
+				requestAnimationFrame(() => this.ensure_editor_visible());
+				setTimeout(() => this.ensure_editor_visible(), 300);
 			})
 			.catch(() => {
 				this._editor_pending = false;
@@ -96,7 +100,12 @@ frappe.ui.form.ControlTextEditor = class ControlTextEditor extends frappe.ui.for
 			directionality: direction,
 			language: this.get_language(),
 			toolbar_mode: "sliding",
-			toolbar_sticky: true,
+			// Frappe's desk scrolls inside a container, but TinyMCE's sticky toolbar
+			// tracks window scroll. On a long form in a short viewport it decides the
+			// editor is out of view and hides the header with CSS — the field then
+			// shows a correctly sized editor whose toolbar paints nothing, and it is
+			// never recomputed because the window never scrolls.
+			toolbar_sticky: false,
 			convert_urls: false,
 			relative_urls: false,
 			remove_script_host: false,
@@ -170,7 +179,6 @@ frappe.ui.form.ControlTextEditor = class ControlTextEditor extends frappe.ui.for
 		// Space is tight inside a grid row — collapse to a single compact toolbar row.
 		if (this.grid_row) {
 			options.toolbar = "bold italic underline | bullist numlist | link | removeformat";
-			options.toolbar_sticky = false;
 		}
 		return options;
 	}
@@ -421,15 +429,24 @@ frappe.ui.form.ControlTextEditor = class ControlTextEditor extends frappe.ui.for
 		this.ensure_editor_visible();
 	}
 
-	// TinyMCE renders the shell with `visibility: hidden` and clears it once the
-	// skin and sizing settle. On a cold form load that clear can be missed,
-	// leaving a correctly sized but completely invisible editor — the field shows
-	// its label and then blank space. Clearing it ourselves is idempotent.
+	// TinyMCE renders its shell — and the header/toolbar inside it — with
+	// `visibility: hidden`, clearing them once the skin and sizing settle. On a
+	// cold form load that clear can be missed. Clearing only the outer container
+	// leaves a correctly sized editor whose toolbar paints nothing, so sweep the
+	// container *and* its descendants. Idempotent: only inline "hidden" is reset,
+	// so anything deliberately hidden by the skin's own classes is untouched.
 	ensure_editor_visible() {
 		const container = this._editor && this._editor.getContainer && this._editor.getContainer();
-		if (container && container.style.visibility === "hidden") {
-			container.style.visibility = "";
-		}
+		if (!container) return;
+
+		const unhide = (node) => {
+			if (node && node.style && node.style.visibility === "hidden") {
+				node.style.visibility = "";
+			}
+		};
+
+		unhide(container);
+		container.querySelectorAll('[style*="visibility"]').forEach(unhide);
 	}
 
 	set_editor_mode() {

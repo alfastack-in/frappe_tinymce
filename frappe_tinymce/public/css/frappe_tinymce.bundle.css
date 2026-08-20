@@ -18,10 +18,6 @@
 	border-bottom: 1px solid var(--border-color);
 }
 
-.tox.tox-tinymce--toolbar-sticky-on .tox-editor-header {
-	top: var(--tinymce-sticky-offset, 0) !important;
-}
-
 .tox .tox-toolbar,
 .tox .tox-toolbar__primary,
 .tox .tox-toolbar__overflow {
