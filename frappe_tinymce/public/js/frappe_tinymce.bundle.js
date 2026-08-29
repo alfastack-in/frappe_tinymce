@@ -176,8 +176,19 @@ frappe.ui.form.ControlTextEditor = class ControlTextEditor extends frappe.ui.for
 		if (this.df.placeholder) {
 			options.placeholder = __(this.df.placeholder);
 		}
-		// Space is tight inside a grid row — collapse to a single compact toolbar row.
-		if (this.grid_row) {
+
+		if (this.is_in_grid_cell()) {
+			// An inline grid cell is a single table row tall. A toolbar fills it
+			// completely and pushes the editable area out of sight, so the cell
+			// shows nothing but buttons. Frappe's own Quill control drops the
+			// toolbar outright here for the same reason (form/controls/text_editor.js:
+			// "In a grid row where space is constrained, hide the toolbar").
+			// Formatting stays available in the expanded row, which has room for it.
+			options.toolbar = false;
+			options.min_height = this.df.min_height || 30;
+		} else if (this.is_in_grid_form()) {
+			// Space is tight in an expanded row's detail form (~370px column) —
+			// collapse to a single compact toolbar row.
 			options.toolbar = "bold italic underline | bullist numlist | link | removeformat";
 		}
 		return options;
@@ -466,6 +477,20 @@ frappe.ui.form.ControlTextEditor = class ControlTextEditor extends frappe.ui.for
 		}
 	}
 
+	// grid_row.js sets `grid_row` only on the controls it builds for inline grid
+	// cells. The expanded row's detail form builds its controls through Layout,
+	// which forwards neither grid_row nor grid_row_form to the control - so the
+	// detail form is only reachable via `this.layout`. Treating `this.grid_row`
+	// as "somewhere in a grid" conflates the two, which is what put a toolbar in
+	// a one-row-tall cell.
+	is_in_grid_cell() {
+		return !!this.grid_row;
+	}
+
+	is_in_grid_form() {
+		return !!(this.layout && this.layout.grid_row_form);
+	}
+
 	get_max_height() {
 		// autoresize grows the editor to fit its content, so without a cap a long
 		// letter turns the whole form into an endless scroll (measured: 150
@@ -473,7 +498,8 @@ frappe.ui.form.ControlTextEditor = class ControlTextEditor extends frappe.ui.for
 		// editor scrolls internally; `fullscreen` is on the toolbar for long-form
 		// editing.
 		if (this.df.max_height) return parseInt(this.df.max_height, 10);
-		if (this.grid_row) return 120;
+		if (this.is_in_grid_cell()) return 120;
+		if (this.is_in_grid_form()) return 240;
 		return frappe_tinymce.default_max_height;
 	}
 
